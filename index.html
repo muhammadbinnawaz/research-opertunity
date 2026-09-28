@@ -1,0 +1,237 @@
+<!DOCTYPE html>
+<html>
+<head>
+    <meta charset="UTF-8">
+    <title>Research Opportunity Portal</title>
+    <style>
+        body { font-family: Arial, sans-serif; max-width: 950px; margin: 20px auto; padding: 0 10px; }
+        h1 { text-align: center; }
+        table { width: 100%; border-collapse: collapse; margin-bottom: 20px; }
+        th, td { border: 1px solid #999; padding: 6px; text-align: left; }
+        th { background: #eee; }
+        input, textarea, select { width: 100%; padding: 5px; margin: 4px 0 10px 0; box-sizing: border-box; }
+        button { padding: 5px 10px; margin-right: 4px; cursor: pointer; }
+        .box { border: 1px solid #999; padding: 12px; margin-bottom: 20px; }
+        #message { padding: 8px; margin-bottom: 15px; display: none; }
+        .good { background: #d4f5d4; border: 1px solid green; }
+        .bad { background: #f8d4d4; border: 1px solid red; }
+    </style>
+</head>
+<body>
+
+    <h1>Research Opportunity Portal</h1>
+    <div id="message"></div>
+
+    <h2>All Opportunities</h2>
+    <table>
+        <thead>
+            <tr>
+                <th>ID</th><th>Title</th><th>Faculty</th><th>Deadline</th><th>Status</th><th>Actions</th>
+            </tr>
+        </thead>
+        <tbody id="list"></tbody>
+    </table>
+
+    <div class="box" id="details" style="display:none"></div>
+
+    <div class="box">
+        <h2 id="formTitle">Add New Opportunity</h2>
+        <label>Title</label>
+        <input type="text" id="title">
+        <label>Description</label>
+        <textarea id="description" rows="3"></textarea>
+        <label>Research Area</label>
+        <input type="text" id="research_area">
+        <label>Faculty Member Name</label>
+        <input type="text" id="faculty_name">
+        <label>Department</label>
+        <input type="text" id="department">
+        <label>Required Skills</label>
+        <input type="text" id="required_skills">
+        <label>Available Positions</label>
+        <input type="number" id="positions" min="1">
+        <label>Application Deadline</label>
+        <input type="date" id="deadline">
+        <label>Status</label>
+        <select id="status">
+            <option>Open</option>
+            <option>Closed</option>
+        </select>
+        <button onclick="saveForm()" id="saveBtn">Add Opportunity</button>
+        <button onclick="resetForm()">Clear</button>
+    </div>
+
+<script>
+    const API = "/api/opportunities";
+    const fields = ["title", "description", "research_area", "faculty_name",
+                    "department", "required_skills", "positions", "deadline", "status"];
+    let editingId = null;
+
+    function showMessage(text, isGood) {
+        const box = document.getElementById("message");
+        box.textContent = text;
+        box.className = isGood ? "good" : "bad";
+        box.style.display = "block";
+    }
+
+    async function loadAll() {
+        try {
+            const res = await fetch(API);
+            const data = await res.json();
+            const list = document.getElementById("list");
+            list.innerHTML = "";
+
+            for (const o of data) {
+                const row = document.createElement("tr");
+                const cells = [o.id, o.title, o.faculty_name, o.deadline, o.status];
+                for (const c of cells) {
+                    const td = document.createElement("td");
+                    td.textContent = c;
+                    row.appendChild(td);
+                }
+
+                const actions = document.createElement("td");
+                actions.appendChild(makeButton("View", () => viewOne(o.id)));
+                actions.appendChild(makeButton("Edit", () => editOne(o.id)));
+                if (o.status === "Open") {
+                    actions.appendChild(makeButton("Close", () => closeOne(o.id)));
+                }
+                actions.appendChild(makeButton("Delete", () => deleteOne(o.id)));
+                row.appendChild(actions);
+                list.appendChild(row);
+            }
+        } catch (err) {
+            showMessage("Could not load opportunities. Is the server running?", false);
+        }
+    }
+
+    function makeButton(text, action) {
+        const b = document.createElement("button");
+        b.textContent = text;
+        b.onclick = action;
+        return b;
+    }
+
+    async function viewOne(id) {
+        const res = await fetch(API + "/" + id);
+        const o = await res.json();
+        if (!res.ok) {
+            showMessage(o.error, false);
+            return;
+        }
+
+        const box = document.getElementById("details");
+        box.innerHTML = "";
+        const heading = document.createElement("h2");
+        heading.textContent = o.title;
+        box.appendChild(heading);
+
+        for (const f of fields) {
+            if (f === "title") continue;
+            const p = document.createElement("p");
+            p.textContent = f.replace("_", " ") + ": " + o[f];
+            box.appendChild(p);
+        }
+        box.style.display = "block";
+    }
+
+    async function editOne(id) {
+        const res = await fetch(API + "/" + id);
+        const o = await res.json();
+        if (!res.ok) {
+            showMessage(o.error, false);
+            return;
+        }
+
+        for (const f of fields) {
+            document.getElementById(f).value = o[f];
+        }
+        editingId = id;
+        document.getElementById("formTitle").textContent = "Update Opportunity #" + id;
+        document.getElementById("saveBtn").textContent = "Update Opportunity";
+        window.scrollTo(0, document.body.scrollHeight);
+    }
+
+    async function closeOne(id) {
+        const res = await fetch(API + "/" + id, {
+            method: "PUT",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ status: "Closed" })
+        });
+        const data = await res.json();
+        if (res.ok) {
+            showMessage("Opportunity closed", true);
+            loadAll();
+        } else {
+            showMessage(data.error, false);
+        }
+    }
+
+    async function deleteOne(id) {
+        if (!confirm("Delete opportunity " + id + "?")) return;
+
+        const res = await fetch(API + "/" + id, { method: "DELETE" });
+        const data = await res.json();
+        if (res.ok) {
+            showMessage("Opportunity deleted", true);
+            document.getElementById("details").style.display = "none";
+            loadAll();
+        } else {
+            showMessage(data.error, false);
+        }
+    }
+
+    async function saveForm() {
+        const body = {};
+        for (const f of fields) {
+            body[f] = document.getElementById(f).value.trim();
+            if (body[f] === "") {
+                showMessage("Please fill in: " + f.replace("_", " "), false);
+                return;
+            }
+        }
+        if (Number(body.positions) < 1) {
+            showMessage("Positions must be at least 1", false);
+            return;
+        }
+
+        let url = API;
+        let method = "POST";
+        if (editingId !== null) {
+            url = API + "/" + editingId;
+            method = "PUT";
+        }
+
+        try {
+            const res = await fetch(url, {
+                method: method,
+                headers: { "Content-Type": "application/json" },
+                body: JSON.stringify(body)
+            });
+            const data = await res.json();
+            if (res.ok) {
+                showMessage(editingId === null ? "Opportunity added" : "Opportunity updated", true);
+                resetForm();
+                loadAll();
+            } else {
+                showMessage(data.error, false);
+            }
+        } catch (err) {
+            showMessage("Could not reach the server", false);
+        }
+    }
+
+    function resetForm() {
+        for (const f of fields) {
+            document.getElementById(f).value = "";
+        }
+        document.getElementById("status").value = "Open";
+        editingId = null;
+        document.getElementById("formTitle").textContent = "Add New Opportunity";
+        document.getElementById("saveBtn").textContent = "Add Opportunity";
+    }
+
+    loadAll();
+</script>
+</body>
+</html>
