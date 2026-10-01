@@ -4,7 +4,8 @@ it is a  simple web app where faculty members can post view update and delete re
 Name:Muhammad Bin Nawaz
 Roll No:24P-0733
 Class:BSCS 5A
-GitHub Repository:https://github.com/muhammadbinnawaz/research-opportunity-portal
+GitHub Repository:https://github.com/muhammadbinnawaz/research-opertunity
+Demo Video: Coming soon
 
 ##Features
 - Add a new research opportunity through a form
