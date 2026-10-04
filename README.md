@@ -5,7 +5,7 @@ Name:Muhammad Bin Nawaz
 Roll No:24P-0733
 Class:BSCS 5A
 GitHub Repository:https://github.com/muhammadbinnawaz/research-opertunity
-Demo Video: Coming soon
+Demo Video:https://www.youtube.com/watch?v=Ot7jHod_qm0
 
 ##Features
 - Add a new research opportunity through a form
